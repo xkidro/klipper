@@ -129,8 +129,9 @@ class BLTouchEndstopWrapper:
                                     desc=self.cmd_BLTOUCH_DEBUG_help)
     def _build_config(self):
         kin = self.printer.lookup_object('toolhead').get_kinematics()
-        for stepper in kin.get_steppers('Z'):
-            self.add_stepper(stepper)
+        for stepper in kin.get_steppers():
+            if stepper.is_active_axis('z'):
+                self.add_stepper(stepper)
     def sync_mcu_print_time(self):
         curtime = self.printer.get_reactor().monotonic()
         est_time = self.mcu_pwm.get_mcu().estimated_print_time(curtime)

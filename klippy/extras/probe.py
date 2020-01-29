@@ -270,8 +270,9 @@ class ProbeEndstopWrapper:
         self.TimeoutError = self.mcu_endstop.TimeoutError
     def _build_config(self):
         kin = self.printer.lookup_object('toolhead').get_kinematics()
-        for stepper in kin.get_steppers('Z'):
-            self.add_stepper(stepper)
+        for stepper in kin.get_steppers():
+            if stepper.is_active_axis('z'):
+                self.add_stepper(stepper)
     def home_prepare(self):
         toolhead = self.printer.lookup_object('toolhead')
         start_pos = toolhead.get_position()
@@ -312,6 +313,7 @@ class ProbePointsHelper:
                     self.name))
         self.horizontal_move_z = config.getfloat('horizontal_move_z', 5.)
         self.speed = config.getfloat('speed', 50., above=0.)
+        self.use_offsets = False
         # Internal probing state
         self.probe_offsets = (0., 0., 0.)
         self.results = []
@@ -320,6 +322,8 @@ class ProbePointsHelper:
         if len(self.probe_points) < n:
             raise self.printer.config_error(
                 "Need at least %d probe points for %s" % (n, self.name))
+    def use_xy_offsets(self, use_offsets):
+        self.use_offsets = use_offsets
     def get_lift_speed(self):
         return self.retract_speed
     def _move_next(self):
@@ -338,6 +342,9 @@ class ProbePointsHelper:
             self.results = []
         # Move to next XY probe point
         curpos[:2] = self.probe_points[len(self.results)]
+        if self.use_offsets:
+            curpos[0] -= self.probe_offsets[0]
+            curpos[1] -= self.probe_offsets[1]
         toolhead.move(curpos, self.speed)
         self.gcode.reset_last_position()
         return False
